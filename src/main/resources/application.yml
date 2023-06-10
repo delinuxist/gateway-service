@@ -4,38 +4,51 @@ spring:
   config:
     import: optional:configserver:http://localhost:8081
 
-  security:
-    oauth2:
-      client:
-        registration:
-          gateway:
-            provider: keycloak
-            client-id: tradeX-rest-api
-            client-secret: Hl0t06h5BF3vOz9aTRUUYcl5N9Vcek0F
-            scope: openid
-            authorization-grant-type: authorization_code
-            redirect-uri: http://localhost:5000/login/oauth2/code/keycloak
+  cloud:
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "http://localhost:4200"
+            allowedHeaders: "*"
+            allowedMethods:
+              - GET
+              - POST
+      discovery:
+        locator:
+          enabled: true
+      routes:
+        - id: authorization-service
+          uri: lb://authorization-service
+          predicates:
+            - Path=/auth/**,/user/**
 
-        provider:
-          keycloak:
-            authorization-uri: http://localhost:8080/realms/TradeX/protocol/openid-connect/auth
-            token-uri: http://localhost:8080/realms/TradeX/protocol/openid-connect/token
-            user-info-uri: http://localhost:8080/realms/TradeX/protocol/openid-connect/userinfo
-            user-name-attribute: sub
-            jwk-set-uri: http://localhost:8080/realms/TradeX/protocol/openid-connect/certs
-#      resourceserver:
-#        jwt:
-#          issuer-uri: http://localhost:8080/realms/TradeX
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/order/**
+          filters:
+            - AuthenticationFilter
+        - id: market-data-service
+          uri: lb://market-data-service
+          predicates:
+            - Path=/market/**
+          filters:
+            - AuthenticationFilter
+        - id: report-service
+          uri: lb://report-service
+          predicates:
+            - Path=/report/**
+          filters:
+            - AuthenticationFilter
+        - id: order-validation
+          uri: lb://order-validation
+          predicates:
+            - Path=/validation/**
+          filters:
+            - AuthenticationFilter
 
-
-
-#          keycloak-provider:
-#            issuer-uri: http://localhost:8080/realms/TradeX
-
-#        registration:
-#          keycloak-spring-gateway:
-#            provider: keycloak-provider
-#            client-id: tradeX-rest-api
-#            client-secret: lo1F8PvkGOyqIdseMlgjALFTgIduunQ1
-#            authorization-grant-type: authorization_code
-#            redirect-uri: '{baseUrl}/login/oauth2/code/keycloak'
+jwt:
+  secret: 743777217A25432A462D4A614E645267556B58703273357638782F413F442847
